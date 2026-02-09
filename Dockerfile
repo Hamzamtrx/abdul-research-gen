@@ -1,30 +1,14 @@
-FROM oven/bun:1
+FROM mcr.microsoft.com/playwright:v1.40.0-jammy
 
 WORKDIR /app
 
-# Install dependencies for Playwright Chromium
-RUN apt-get update && apt-get install -y \
-    libnss3 \
-    libatk-bridge2.0-0 \
-    libdrm2 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libgbm1 \
-    libasound2 \
-    libpangocairo-1.0-0 \
-    libgtk-3-0 \
-    libxshmfence1 \
-    && rm -rf /var/lib/apt/lists/*
+# Install Bun
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH="/root/.bun/bin:${PATH}"
 
-# Copy package files
+# Copy package files and install
 COPY package.json bun.lock* ./
-
-# Install dependencies
 RUN bun install
-
-# Install Playwright Chromium
-RUN bunx playwright install chromium
 
 # Copy source
 COPY . .
