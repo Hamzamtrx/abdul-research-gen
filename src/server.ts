@@ -7,6 +7,16 @@ import {
   exchangeDriveAuthCode,
   getDriveOAuthRedirectUri,
 } from "./googleDrive";
+import {
+  buildFacebookOAuthUrl,
+  exchangeFacebookAuthCode,
+  getFacebookOAuthRedirectUri,
+  getLongLivedToken,
+  getAdAccounts,
+  getAds,
+  scrapeAdsLibrary,
+  isFacebookConfigured,
+} from "./facebook";
 import path from "path";
 import fs from "fs";
 import { runResearch } from "./research/index";
@@ -25,6 +35,8 @@ app.get("/api/health", async (req: Request, res: Response) => {
       GOOGLE_DRIVE_CLIENT_ID: !!process.env.GOOGLE_DRIVE_CLIENT_ID,
       GOOGLE_DRIVE_CLIENT_SECRET: !!process.env.GOOGLE_DRIVE_CLIENT_SECRET,
       GOOGLE_DRIVE_REFRESH_TOKEN: !!process.env.GOOGLE_DRIVE_REFRESH_TOKEN,
+      FACEBOOK_APP_ID: !!process.env.FACEBOOK_APP_ID,
+      FACEBOOK_APP_SECRET: !!process.env.FACEBOOK_APP_SECRET,
       VALYU_API_KEY: !!process.env.VALYU_API_KEY,
     },
     config: {
@@ -120,6 +132,131 @@ app.get("/api/google/oauth/callback", async (req: Request, res: Response) => {
           details: errMessage,
         }),
       );
+  }
+});
+
+// Facebook OAuth - Start authorization
+app.get("/api/facebook/oauth", (req: Request, res: Response) => {
+  if (!isFacebookConfigured()) {
+    res.status(500).json({ error: "Facebook App not configured" });
+    return;
+  }
+  const state = req.query.state as string | undefined;
+  const authUrl = buildFacebookOAuthUrl(state);
+  res.redirect(authUrl);
+});
+
+// Facebook OAuth - Callback
+app.get("/api/facebook/oauth/callback", async (req: Request, res: Response) => {
+  const { code, error, error_description } = req.query;
+
+  if (error) {
+    res.status(400).send(
+      renderOAuthResultPage({
+        success: false,
+        heading: "Facebook Authorization Failed",
+        details: `${error}: ${error_description ?? "Unknown error"}`,
+      })
+    );
+    return;
+  }
+
+  if (typeof code !== "string" || !code) {
+    res.status(400).send(
+      renderOAuthResultPage({
+        success: false,
+        heading: "Missing Authorization Code",
+        details: "No code parameter was provided by Facebook.",
+      })
+    );
+    return;
+  }
+
+  try {
+    const tokens = await exchangeFacebookAuthCode(code);
+    const longLivedTokens = await getLongLivedToken(tokens.accessToken);
+
+    res.send(
+      renderOAuthResultPage({
+        success: true,
+        heading: "Facebook OAuth Complete",
+        details: "Copy the access token below into your environment variables.",
+        accessToken: longLivedTokens.accessToken,
+        expiresIn: longLivedTokens.expiresIn,
+        redirectUri: getFacebookOAuthRedirectUri(),
+      })
+    );
+  } catch (authError) {
+    const errMessage = authError instanceof Error ? authError.message : "Unknown error";
+    res.status(500).send(
+      renderOAuthResultPage({
+        success: false,
+        heading: "Facebook Token Exchange Failed",
+        details: errMessage,
+      })
+    );
+  }
+});
+
+// Get Facebook Ad Accounts
+app.get("/api/facebook/ad-accounts", async (req: Request, res: Response) => {
+  const accessToken = req.headers.authorization?.replace("Bearer ", "") ||
+    (req.query.access_token as string);
+
+  if (!accessToken) {
+    res.status(401).json({ error: "Access token required" });
+    return;
+  }
+
+  try {
+    const accounts = await getAdAccounts(accessToken);
+    res.json({ data: accounts });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+// Get Ads from an Ad Account
+app.get("/api/facebook/ads/:adAccountId", async (req: Request, res: Response) => {
+  const { adAccountId } = req.params;
+  const accessToken = req.headers.authorization?.replace("Bearer ", "") ||
+    (req.query.access_token as string);
+  const limit = parseInt(req.query.limit as string) || 50;
+  const status = req.query.status as string | undefined;
+
+  if (!accessToken) {
+    res.status(401).json({ error: "Access token required" });
+    return;
+  }
+
+  try {
+    const ads = await getAds(accessToken, adAccountId, { limit, status });
+    res.json({ data: ads });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: message });
+  }
+});
+
+// Scrape Facebook Ads Library (public, no auth needed)
+app.get("/api/facebook/ads-library", async (req: Request, res: Response) => {
+  const { q, country = "US", limit = "20" } = req.query;
+
+  if (!q || typeof q !== "string") {
+    res.status(400).json({ error: "Query parameter 'q' is required (brand/page name)" });
+    return;
+  }
+
+  try {
+    const ads = await scrapeAdsLibrary(q, {
+      country: country as string,
+      limit: parseInt(limit as string),
+    });
+    res.json({ data: ads, query: q, count: ads.length });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    res.status(500).json({ error: message });
   }
 });
 
