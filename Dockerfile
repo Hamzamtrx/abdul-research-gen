@@ -1,13 +1,9 @@
-FROM oven/bun:1 AS base
+FROM oven/bun:1
+
 WORKDIR /app
 
-# Install system dependencies in one layer
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    python3 \
-    python3-pip \
-    ca-certificates \
-    fonts-liberation \
+# Install dependencies for Playwright Chromium
+RUN apt-get update && apt-get install -y \
     libnss3 \
     libatk-bridge2.0-0 \
     libdrm2 \
@@ -18,25 +14,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2 \
     libpangocairo-1.0-0 \
     libgtk-3-0 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libgdk-pixbuf-2.0-0 \
-    libffi-dev \
-    shared-mime-info \
+    libxshmfence1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Bun dependencies first (cache layer)
+# Copy package files
 COPY package.json bun.lock* ./
-RUN bun install --frozen-lockfile
+
+# Install dependencies
+RUN bun install
 
 # Install Playwright Chromium
 RUN bunx playwright install chromium
 
-# Install Python packages
-COPY requirements.txt ./
-RUN pip3 install --no-cache-dir --break-system-packages -r requirements.txt
-
-# Copy source code
+# Copy source
 COPY . .
 
 # Create output directories
@@ -45,4 +35,3 @@ RUN mkdir -p src/output/Projects src/output/SlackThreads
 EXPOSE 3000
 
 CMD ["bun", "run", "start-all.ts"]
-
