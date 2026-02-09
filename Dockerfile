@@ -2,14 +2,14 @@ FROM mcr.microsoft.com/playwright:v1.40.0-jammy
 
 WORKDIR /app
 
-# Install unzip and Bun
-RUN apt-get update && apt-get install -y unzip && rm -rf /var/lib/apt/lists/*
-RUN curl -fsSL https://bun.sh/install | bash
-ENV PATH="/root/.bun/bin:${PATH}"
+# Copy package files
+COPY package.json ./
 
-# Copy package files and install
-COPY package.json bun.lock* ./
-RUN bun install
+# Install with npm
+RUN npm install
+
+# Install tsx for TypeScript execution
+RUN npm install -g tsx
 
 # Copy source
 COPY . .
@@ -19,4 +19,4 @@ RUN mkdir -p src/output/Projects src/output/SlackThreads
 
 EXPOSE 3000
 
-CMD ["bun", "run", "start-all.ts"]
+CMD ["tsx", "start-all.ts"]

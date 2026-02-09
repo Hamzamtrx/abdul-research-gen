@@ -1,27 +1,21 @@
-import { spawn } from "bun";
+import { spawn } from "child_process";
 
 console.log("Starting webhook server and Slack bot...");
 
-const webhookServer = spawn({
-  cmd: ["bun", "src/server.ts"],
-  stdout: "inherit",
-  stderr: "inherit",
-  stdin: "inherit",
+const webhookServer = spawn("tsx", ["src/server.ts"], {
+  stdio: "inherit",
 });
 
-const slackBot = spawn({
-  cmd: ["bun", "src/slackServer.ts"],
-  stdout: "inherit",
-  stderr: "inherit",
-  stdin: "inherit",
+const slackBot = spawn("tsx", ["src/slackServer.ts"], {
+  stdio: "inherit",
 });
 
-webhookServer.exited.then((code) => {
+webhookServer.on("exit", (code) => {
   console.error(`Webhook server exited with code ${code}`);
   process.exit(code || 1);
 });
 
-slackBot.exited.then((code) => {
+slackBot.on("exit", (code) => {
   console.error(`Slack bot exited with code ${code}`);
   process.exit(code || 1);
 });
@@ -41,4 +35,3 @@ process.on("SIGINT", () => {
 });
 
 console.log("Both services started successfully");
-
