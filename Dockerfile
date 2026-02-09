@@ -1,7 +1,7 @@
 FROM oven/bun:1 AS base
 WORKDIR /app
 
-# Install minimal system dependencies in one layer
+# Install system dependencies in one layer
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     python3 \
@@ -18,6 +18,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2 \
     libpangocairo-1.0-0 \
     libgtk-3-0 \
+    libpango-1.0-0 \
+    libcairo2 \
+    libgdk-pixbuf-2.0-0 \
+    libffi-dev \
+    shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Bun dependencies first (cache layer)
