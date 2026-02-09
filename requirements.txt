@@ -1,0 +1,23 @@
+# PDF Generation Dependencies
+# Required for the compile-research-pdf skill
+
+# WeasyPrint - HTML to PDF conversion
+weasyprint>=60.0
+
+# Markdown - Convert markdown to HTML
+markdown>=3.5
+
+# Additional dependencies for WeasyPrint
+# (These are typically installed automatically with weasyprint, but listed for clarity)
+Pillow>=10.0.0
+cffi>=1.15.0
+pycairo>=1.23.0
+
+# MongoDB for Slack conversation persistence
+pymongo>=4.6.0
+
+# Audio/Video Transcription
+# OpenAI Whisper for speech-to-text transcription
+openai-whisper>=20231117
+torch>=2.0.0
+torchaudio>=2.0.0

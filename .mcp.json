@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "meta-ads-remote": {
+      "type": "sse",
+      "url": "https://mcp.pipeboard.co/meta-ads-mcp?token=${PIPEBOARD_TOKEN}"
+    }
+  }
+}
